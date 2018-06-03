@@ -6,7 +6,7 @@ from OLSTM_utils import *
 
 class DataLoader:
 
-    def __init__(self, batch_size, samples_to_load, data_path, scaling_factor=10, grid_size=16, max_dist_neighbors=60,verbose= False):
+    def __init__(self, batch_size, samples_to_load, data_path, scaling_factor=10, grid_size=16, max_dist_neighbors=60, verbose=False):
         self.batch_size = batch_size
         self.index = 0
         self.scaling_factor = scaling_factor
@@ -26,9 +26,10 @@ class DataLoader:
             neighbors_per_frame = [torch.Tensor() for x in range(20)]
 
             # Load center a pedestrian trajectory and its neighbors
-            center_traj = pd.read_csv(
-                data_path + file_path + '_traj.csv',
+            tracklet = pd.read_csv(
+                data_path + file_path + '.csv',
                 header=None, delimiter=',')
+            center_traj = tracklet.iloc[:20, :]
             center_traj.loc[:, [2, 3]] = center_traj.loc[
                 :, [2, 3]] * self.scaling_factor
             center_traj_torch = (
@@ -36,12 +37,7 @@ class DataLoader:
             map_frame_nb_to_idx = dict(
                 [(x, idx) for idx, x in enumerate(center_traj[0].values)])
 
-            # Check if neighbors file is empty
-            if os.path.getsize(data_path + file_path + '_neighbors.csv'):
-                neighbors = pd.read_csv(
-                    data_path + file_path + '_neighbors.csv', header=None, delimiter=',')
-            else:
-                neighbors = pd.DataFrame(columns=list(range(4)))
+            neighbors = tracklet.iloc[20:,:]
             neighbors.loc[:, [2, 3]] = neighbors.loc[
                 :, [2, 3]] * self.scaling_factor
             # Group by frame and fill neighbors_per_frame
@@ -51,13 +47,9 @@ class DataLoader:
             # Create occupancy maps for the observed steps
             temp = []
             for idx, frame in enumerate(neighbors_per_frame[:8]):
-                ggg = get_grid(frame, None, ped_data=center_traj_torch[idx, :][[2,3]],
+                ggg = get_grid(frame, None, ped_data=center_traj_torch[idx, :][[2, 3]],
                                grid_size=self.grid_size, max_dist=self.max_dist_neighbors)
                 temp.append(ggg.unsqueeze(0))
-
-
-
-
 
             # Append to global arrays
             temp = torch.cat(temp, 0)

@@ -21,17 +21,15 @@ class DataLoader:
             neighbors_per_frame = [[] for x in range(20)]
 
             # Load center a pedestrian trajectory and its neighbors
-            center_traj = pd.read_csv(
-                data_path + file_path + '_traj.csv', header=None, delimiter=',')
+            tracklet = pd.read_csv(
+                data_path + file_path + '.csv', header=None, delimiter=',')
+            center_traj = tracklet.iloc[:20, :]
             center_traj.loc[:, [2, 3]] = center_traj.loc[
                 :, [2, 3]] * self.scaling_factor
             map_frame_nb_to_idx = dict(
                 [(x, idx) for idx, x in enumerate(center_traj[0].values)])
-            if os.path.getsize(data_path + file_path + '_neighbors.csv'):
-                neighbors = pd.read_csv(
-                    data_path + file_path + '_neighbors.csv', header=None, delimiter=',')
-            else:
-                neighbors = pd.DataFrame(columns=list(range(4)))
+            neighbors = tracklet.iloc[20:, :]
+
             neighbors.loc[:, [2, 3]] = neighbors.loc[
                 :, [2, 3]] * self.scaling_factor
             # Group by frame and fill neighbors_per_frame

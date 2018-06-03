@@ -26,26 +26,22 @@ class DataLoader:
             neighbors_per_frame = [[] for x in range(20)]
 
             # Load center a pedestrian trajectory and its neighbors
-            center_traj = pd.read_csv(
-                data_path + file_path + '_traj.csv',
+            tracklet = pd.read_csv(
+                data_path + file_path + '.csv',
                 header=None, delimiter=',')
+            center_traj = tracklet.iloc[:20, :]
             center_traj.loc[:, [2, 3]] = center_traj.loc[
                 :, [2, 3]] * self.scaling_factor
             center_traj_torch = (
                 en_cuda(torch.Tensor(center_traj.as_matrix())))
-            center_traj_min, center_traj_max = center_traj.loc[0,
-                                                               0], center_traj.loc[19, 0]
-            increment = int((center_traj_max - center_traj_min) / 19)
-            # Check if neighbors file is empty
-            if os.path.getsize(data_path + file_path + '_neighbors.csv'):
-                neighbors = pd.read_csv(
-                    data_path + file_path + '_neighbors.csv', header=None, delimiter=',')
-            else:
-                neighbors = pd.DataFrame(columns=list(range(4)))
+            neighbors = tracklet.iloc[20:, :]
             neighbors.loc[:, [2, 3]] = neighbors.loc[
                 :, [2, 3]] * self.scaling_factor
-            # Group by id and fill neighbors_per_frame
 
+            center_traj_min, center_traj_max = center_traj.loc[0,0], center_traj.loc[19, 0]
+            increment = int((center_traj_max - center_traj_min) / 19)
+
+            # Group by id and fill neighbors_per_frame
 
             for ped_id, x in neighbors.groupby(1):
                 ped_min_frame = x.iloc[0, 0]
@@ -61,12 +57,13 @@ class DataLoader:
                         neighbors_per_frame[i].append(en_cuda(
                             torch.Tensor(x.iloc[index_in_x, :].as_matrix()).unsqueeze(0)))
 
-            neighbors_per_frame = [torch.cat(x,0)  if len(x) else [] for x in neighbors_per_frame]
+            neighbors_per_frame = [torch.cat(x, 0) if len(
+                x) else [] for x in neighbors_per_frame]
             # get positions in occupancy map for the observed steps
             temp = []
             for idx, frame in enumerate(neighbors_per_frame[:8]):
                 (indexes_in_grid, valid_neighbors_indexes) = get_grid_positions(frame, None, ped_data=center_traj_torch[idx, :][[2, 3]],
-                                                                grid_size=self.grid_size, max_dist=self.max_dist_neighbors)
+                                                                                grid_size=self.grid_size, max_dist=self.max_dist_neighbors)
                 temp.append((indexes_in_grid, valid_neighbors_indexes))
 
             # Append to global arrays
